@@ -145,16 +145,45 @@ export const ChatPage = {
               </div>
               <div class="conv-item__preview">${this.esc(preview.substring(0, 40))}</div>
             </div>
+            <button class="conv-item__delete" data-id="${c._id}" title="Eliminar conversación">&#128465;</button>
           </div>`;
       }).join('');
 
       list.querySelectorAll('.conv-item').forEach(item => {
         item.addEventListener('click', () => this.openConversation(item.dataset.id));
       });
+
+      list.querySelectorAll('.conv-item__delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deleteConversation(btn.dataset.id);
+        });
+      });
     } catch (err) {
       if (err.message !== 'SESSION_EXPIRED') {
         Toast.error('Error al cargar conversaciones');
       }
+    }
+  },
+
+  async deleteConversation(conversationId) {
+    if (!confirm('¿Eliminar esta conversación? Se borrará el historial de mensajes para ambos participantes.')) return;
+    try {
+      await ChatService.deleteConversation(conversationId);
+      Toast.success('Conversación eliminada');
+      // Si la conversación abierta es la eliminada, limpio el panel.
+      if (this.currentConversationId === conversationId) {
+        ChatService.leaveConversation(conversationId);
+        this.currentConversationId = null;
+        this.messages = [];
+        const chatMain = document.getElementById('chat-main');
+        if (chatMain) {
+          chatMain.innerHTML = '<div class="chat-empty"><p>Selecciona una conversación para comenzar</p></div>';
+        }
+      }
+      await this.loadConversations();
+    } catch (err) {
+      if (err.message !== 'SESSION_EXPIRED') Toast.error(err.message);
     }
   },
 
@@ -195,6 +224,17 @@ export const ChatPage = {
         <input type="text" id="chat-input" class="form__input" placeholder="Escribe un mensaje..." autocomplete="off">
         <button type="submit" class="btn btn--primary">Enviar</button>
       </form>`;
+
+    // Mensaje opcional pre-cargado (p. ej. tras aceptar a un tutor).
+    const prefill = sessionStorage.getItem('sc_chat_prefill');
+    if (prefill) {
+      sessionStorage.removeItem('sc_chat_prefill');
+      const prefillInput = document.getElementById('chat-input');
+      if (prefillInput) {
+        prefillInput.value = prefill;
+        prefillInput.focus();
+      }
+    }
 
     try {
       const data = await ChatService.getMessages(conversationId);

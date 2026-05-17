@@ -74,6 +74,17 @@ export const ChatService = {
     return await res.json();
   },
 
+  async deleteConversation(conversationId) {
+    const res = await Auth.fetchWithAuth(`${Config.API.CONVERSATIONS}/${conversationId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al eliminar la conversación');
+    }
+    return await res.json().catch(() => ({}));
+  },
+
   async getMessages(conversationId, cursor = null, limit = 20) {
     let url = `${Config.API.CONVERSATIONS}/${conversationId}/messages?limit=${limit}`;
     if (cursor) url += `&cursor=${cursor}`;

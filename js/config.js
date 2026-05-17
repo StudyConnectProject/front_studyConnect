@@ -6,5 +6,6 @@ export const Config = {
     EVENTS: '/api/events',
     REPORTS: '/api/reports',
     COURSES: '/api/v1/courses',
+    MATCHING: '/api/matching',
   },
 };

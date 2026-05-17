@@ -7,6 +7,7 @@ import { SearchPage } from './pages/searchPage.js';
 import { ChatPage } from './pages/chatPage.js';
 import { DashboardPage } from './pages/dashboardPage.js';
 import { CoursePage } from './pages/coursePage.js';
+import { MatchingPage } from './pages/matchingPage.js';
 import { ChatService } from './services/chatService.js';
 
 const routes = {
@@ -16,6 +17,7 @@ const routes = {
   '/search': () => SearchPage.render(),
   '/chat': () => ChatPage.render(),
   '/courses': () => CoursePage.render(),
+  '/matching': () => MatchingPage.render(),
   '/dashboard': () => DashboardPage.render(),
 };
 
