@@ -61,7 +61,6 @@ export const Auth = {
     const doFetch = () => {
       const headers = { 'Content-Type': 'application/json', ...options.headers };
       const token = this.getToken();
-      console.log('[Auth] fetchWithAuth →', url, '| token:', token ? token.substring(0, 20) + '...' : '❌ NULL');
       if (token) headers['Authorization'] = `Bearer ${token}`;
       return fetch(url, { ...options, headers });
     };
