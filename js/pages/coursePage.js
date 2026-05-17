@@ -91,13 +91,16 @@ export const CoursePage = {
   },
 
   tutorCourseCard(c) {
-        const statusClass = c.status === 'active' ? 'badge--success' : c.status === 'inactive' ? 'badge--warning' : 'badge--secondary';
+    const statusClass = c.status === 'active' ? 'badge--success' : c.status === 'inactive' ? 'badge--warning' : 'badge--secondary';
+    const desc = c.description || '';
+    const shortDesc = desc.length > 120 ? desc.substring(0, 120) + '…' : desc;
     return `
       <div class="course-card" data-id="${c.id}">
         <div class="course-card__header">
           <h3 class="course-card__title">${this.esc(c.title)}</h3>
           <span class="badge ${statusClass}">${STATUS_LABELS[c.status] || c.status}</span>
         </div>
+        ${shortDesc ? `<p class="course-card__desc">${this.esc(shortDesc)}</p>` : ''}
         <div class="course-card__meta">
           <span class="tag tag--category">${this.esc(c.category)}</span>
           <span class="tag tag--level">${LEVELS[c.level] || c.level}</span>
@@ -108,6 +111,7 @@ export const CoursePage = {
             ? `<button class="btn btn--small btn--primary publish-btn" data-id="${c.id}">Activar</button>`
             : `<button class="btn btn--small btn--secondary inactive-btn" data-id="${c.id}">Desactivar</button>`
           }
+          <button class="btn btn--small btn--secondary edit-btn" data-id="${c.id}">Editar</button>
           <button class="btn btn--small btn--secondary students-btn" data-id="${c.id}">Estudiantes</button>
           <button class="btn btn--small btn--secondary resources-btn" data-id="${c.id}" data-title="${this.esc(c.title)}">Recursos</button>
           <button class="btn btn--small btn--danger delete-btn" data-id="${c.id}">Eliminar</button>
@@ -122,6 +126,8 @@ export const CoursePage = {
       btn.addEventListener('click', () => this.changeStatus(btn.dataset.id, 'inactive')));
     container.querySelectorAll('.delete-btn').forEach(btn =>
       btn.addEventListener('click', () => this.deleteCourse(btn.dataset.id)));
+    container.querySelectorAll('.edit-btn').forEach(btn =>
+      btn.addEventListener('click', () => this.showEditModal(btn.dataset.id)));
     container.querySelectorAll('.students-btn').forEach(btn =>
       btn.addEventListener('click', () => this.showStudentsModal(btn.dataset.id)));
     container.querySelectorAll('.resources-btn').forEach(btn =>
@@ -309,6 +315,59 @@ export const CoursePage = {
     } catch (err) {
       Toast.error(err.message);
       btn.disabled = false;
+    }
+  },
+
+  /* ── Editar curso ────────────────────────────────────────── */
+  async showEditModal(courseId) {
+    this.openModal('Editar Curso', '<div class="loader" style="padding:20px;text-align:center">Cargando...</div>');
+    try {
+      const c = await CourseService.getById(courseId);
+      document.getElementById('modal-body').innerHTML = `
+        <form id="edit-course-form" class="form">
+          <label class="form__label">Título *</label>
+          <input type="text" id="ec-title" class="form__input" value="${this.esc(c.title)}" required maxlength="255">
+          <label class="form__label">Descripción *</label>
+          <textarea id="ec-desc" class="form__input" rows="4" required style="resize:vertical">${this.esc(c.description || '')}</textarea>
+          <label class="form__label">Categoría *</label>
+          <input type="text" id="ec-category" class="form__input" value="${this.esc(c.category)}" required maxlength="100">
+          <label class="form__label">Nivel *</label>
+          <select id="ec-level" class="form__input">
+            <option value="beginner" ${c.level === 'beginner' ? 'selected' : ''}>Principiante</option>
+            <option value="intermediate" ${c.level === 'intermediate' ? 'selected' : ''}>Intermedio</option>
+            <option value="advanced" ${c.level === 'advanced' ? 'selected' : ''}>Avanzado</option>
+          </select>
+          <div style="display:flex;gap:12px;margin-top:16px">
+            <button type="submit" class="btn btn--primary">Guardar cambios</button>
+            <button type="button" id="ec-cancel" class="btn btn--secondary">Cancelar</button>
+          </div>
+        </form>`;
+
+      document.getElementById('ec-cancel').addEventListener('click', () => {
+        document.getElementById('course-modal')?.remove();
+      });
+
+      document.getElementById('edit-course-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('[type="submit"]');
+        btn.disabled = true;
+        try {
+          await CourseService.update(courseId, {
+            title: document.getElementById('ec-title').value.trim(),
+            description: document.getElementById('ec-desc').value.trim(),
+            category: document.getElementById('ec-category').value.trim(),
+            level: document.getElementById('ec-level').value,
+          });
+          Toast.success('Curso actualizado');
+          document.getElementById('course-modal')?.remove();
+          await this.renderTab(true);
+        } catch (err) {
+          Toast.error(err.message);
+          btn.disabled = false;
+        }
+      });
+    } catch (err) {
+      document.getElementById('modal-body').innerHTML = `<p style="color:var(--danger)">${err.message}</p>`;
     }
   },
 
