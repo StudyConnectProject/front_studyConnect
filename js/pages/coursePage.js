@@ -261,18 +261,23 @@ export const CoursePage = {
     } catch (err) { if (err.message !== 'SESSION_EXPIRED') Toast.error(err.message); }
   },
 
-  renderCourseGrid(container, courses, enrolled) {
+  async renderCourseGrid(container, courses, enrolled) {
     if (!courses.length) {
       container.innerHTML = '<p class="empty-state" style="padding:20px">Sin resultados.</p>';
       return;
     }
-    container.innerHTML = courses.map(c => this.studentCourseCard(c, enrolled || this._enrolledIds.has(c.id))).join('');
+    // Fetch unique tutor profiles in parallel
+    const tutorIds = [...new Set(courses.map(c => c.tutor_id).filter(Boolean))];
+    const tutorProfiles = await Promise.all(tutorIds.map(id => UserService.getById(id).catch(() => null)));
+    const tutorMap = {};
+    tutorIds.forEach((id, i) => { if (tutorProfiles[i]) tutorMap[id] = tutorProfiles[i]; });
+
+    container.innerHTML = courses.map(c => this.studentCourseCard(c, enrolled || this._enrolledIds.has(c.id), tutorMap[c.tutor_id])).join('');
     container.querySelectorAll('.course-card').forEach(card => {
       card.style.cursor = 'pointer';
       card.addEventListener('click', (e) => {
-        // Don't open modal when clicking a button inside the card
         if (e.target.closest('button')) return;
-        this.showCourseDetailModal(card.dataset.id);
+        this.showCourseDetailModal(card.dataset.id, tutorMap[card.dataset.tutorid]);
       });
     });
     container.querySelectorAll('.enroll-btn').forEach(btn => {
@@ -283,11 +288,12 @@ export const CoursePage = {
     });
   },
 
-  studentCourseCard(c, isEnrolled) {
+  studentCourseCard(c, isEnrolled, tutor) {
     const desc = c.description || '';
     const shortDesc = desc.length > 120 ? desc.substring(0, 120) + '\u2026' : desc;
+    const tutorName = tutor?.name ? `&#127979; ${this.esc(tutor.name)}` : '';
     return `
-      <div class="course-card" data-id="${c.id}">
+      <div class="course-card" data-id="${c.id}" data-tutorid="${c.tutor_id || ''}">
         <div class="course-card__header">
           <h3 class="course-card__title">${this.esc(c.title)}</h3>
           ${isEnrolled ? '<span class="badge badge--success">Inscrito</span>' : ''}
@@ -297,6 +303,7 @@ export const CoursePage = {
           <span class="tag tag--category">${this.esc(c.category)}</span>
           <span class="tag tag--level">${LEVELS[c.level] || c.level}</span>
         </div>
+        ${tutorName ? `<p class="course-card__tutor">${tutorName}</p>` : ''}
         <p class="course-card__enrolled">&#128100; ${c.enrolled_count ?? 0} estudiantes</p>
         <p class="course-card__hint" style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px">Haz clic para ver más detalles</p>
         <div class="course-card__actions">
@@ -310,11 +317,13 @@ export const CoursePage = {
   },
 
   /* ── Detalle del curso (estudiante) ─────────────────────── */
-  async showCourseDetailModal(courseId) {
+  async showCourseDetailModal(courseId, cachedTutor) {
     this.openModal('Detalle del Curso', '<div class="loader" style="padding:20px;text-align:center">Cargando...</div>');
     try {
       const c = await CourseService.getById(courseId);
       const isEnrolled = this._enrolledIds.has(courseId);
+      const tutor = cachedTutor || (c.tutor_id ? await UserService.getById(c.tutor_id).catch(() => null) : null);
+      const tutorName = tutor?.name || null;
       document.getElementById('modal-body').innerHTML = `
         <div class="course-detail">
           <div class="course-detail__badges">
@@ -323,6 +332,7 @@ export const CoursePage = {
             ${isEnrolled ? '<span class="badge badge--success" style="margin-left:auto">Inscrito</span>' : ''}
           </div>
           <h2 class="course-detail__title">${this.esc(c.title)}</h2>
+          ${tutorName ? `<p class="course-detail__tutor">&#127979; <strong>${this.esc(tutorName)}</strong></p>` : ''}
           <p class="course-detail__desc">${this.esc(c.description || 'Sin descripción.')}</p>
           <div class="course-detail__stats">
             <span>&#128100; ${c.enrolled_count ?? 0} estudiantes inscritos</span>

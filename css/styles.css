@@ -896,6 +896,7 @@ a:hover {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.course-detail__tutor { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
 .course-detail__stats { font-size: 0.875rem; color: var(--text-secondary); }
 .course-card__meta {
   display: flex;
@@ -921,6 +922,11 @@ a:hover {
 .course-card__enrolled {
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+.course-card__tutor {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 2px 0;
 }
 .course-card__actions {
   display: flex;
