@@ -5,5 +5,6 @@ export const Config = {
     CONVERSATIONS: '/api/conversations',
     EVENTS: '/api/events',
     REPORTS: '/api/reports',
+    COURSES: '/api/v1/courses',
   },
 };

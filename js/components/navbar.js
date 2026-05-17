@@ -27,6 +27,7 @@ export const Navbar = {
         <a href="#/chat" class="nav__brand">&#128218; StudyConnect</a>
         <div class="nav__links">
           <a href="#/chat" class="nav__link">&#128172; Chat</a>
+          <a href="#/courses" class="nav__link">&#127979; Cursos</a>
           <a href="#/search" class="nav__link">&#128269; Buscar</a>
           ${adminLink}
           <a href="#/profile" class="nav__link">&#128100; ${user?.email || 'Perfil'}</a>

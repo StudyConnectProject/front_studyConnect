@@ -6,6 +6,7 @@ import { ProfilePage } from './pages/profilePage.js';
 import { SearchPage } from './pages/searchPage.js';
 import { ChatPage } from './pages/chatPage.js';
 import { DashboardPage } from './pages/dashboardPage.js';
+import { CoursePage } from './pages/coursePage.js';
 import { ChatService } from './services/chatService.js';
 
 const routes = {
@@ -14,6 +15,7 @@ const routes = {
   '/profile': () => ProfilePage.render(),
   '/search': () => SearchPage.render(),
   '/chat': () => ChatPage.render(),
+  '/courses': () => CoursePage.render(),
   '/dashboard': () => DashboardPage.render(),
 };
 
