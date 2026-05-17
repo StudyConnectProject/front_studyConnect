@@ -886,6 +886,17 @@ a:hover {
   color: var(--text-secondary);
   line-height: 1.4;
 }
+.course-detail { display: flex; flex-direction: column; gap: 14px; }
+.course-detail__badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.course-detail__title { font-size: 1.3rem; font-weight: 700; margin: 0; }
+.course-detail__desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.course-detail__stats { font-size: 0.875rem; color: var(--text-secondary); }
 .course-card__meta {
   display: flex;
   gap: 6px;

@@ -267,6 +267,14 @@ export const CoursePage = {
       return;
     }
     container.innerHTML = courses.map(c => this.studentCourseCard(c, enrolled || this._enrolledIds.has(c.id))).join('');
+    container.querySelectorAll('.course-card').forEach(card => {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', (e) => {
+        // Don't open modal when clicking a button inside the card
+        if (e.target.closest('button')) return;
+        this.showCourseDetailModal(card.dataset.id);
+      });
+    });
     container.querySelectorAll('.enroll-btn').forEach(btn => {
       btn.addEventListener('click', () => this.toggleEnroll(btn.dataset.id, btn));
     });
@@ -276,18 +284,21 @@ export const CoursePage = {
   },
 
   studentCourseCard(c, isEnrolled) {
+    const desc = c.description || '';
+    const shortDesc = desc.length > 120 ? desc.substring(0, 120) + '\u2026' : desc;
     return `
       <div class="course-card" data-id="${c.id}">
         <div class="course-card__header">
           <h3 class="course-card__title">${this.esc(c.title)}</h3>
           ${isEnrolled ? '<span class="badge badge--success">Inscrito</span>' : ''}
         </div>
-        <p class="course-card__desc">${this.esc((c.description || '').substring(0, 100))}${(c.description || '').length > 100 ? '…' : ''}</p>
+        ${shortDesc ? `<p class="course-card__desc">${this.esc(shortDesc)}</p>` : ''}
         <div class="course-card__meta">
           <span class="tag tag--category">${this.esc(c.category)}</span>
           <span class="tag tag--level">${LEVELS[c.level] || c.level}</span>
         </div>
         <p class="course-card__enrolled">&#128100; ${c.enrolled_count ?? 0} estudiantes</p>
+        <p class="course-card__hint" style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px">Haz clic para ver más detalles</p>
         <div class="course-card__actions">
           ${isEnrolled
             ? `<button class="btn btn--small btn--secondary resources-view-btn" data-id="${c.id}" data-title="${this.esc(c.title)}">Ver recursos</button>
@@ -296,6 +307,64 @@ export const CoursePage = {
           }
         </div>
       </div>`;
+  },
+
+  /* ── Detalle del curso (estudiante) ─────────────────────── */
+  async showCourseDetailModal(courseId) {
+    this.openModal('Detalle del Curso', '<div class="loader" style="padding:20px;text-align:center">Cargando...</div>');
+    try {
+      const c = await CourseService.getById(courseId);
+      const isEnrolled = this._enrolledIds.has(courseId);
+      document.getElementById('modal-body').innerHTML = `
+        <div class="course-detail">
+          <div class="course-detail__badges">
+            <span class="tag tag--category">${this.esc(c.category)}</span>
+            <span class="tag tag--level">${LEVELS[c.level] || c.level}</span>
+            ${isEnrolled ? '<span class="badge badge--success" style="margin-left:auto">Inscrito</span>' : ''}
+          </div>
+          <h2 class="course-detail__title">${this.esc(c.title)}</h2>
+          <p class="course-detail__desc">${this.esc(c.description || 'Sin descripción.')}</p>
+          <div class="course-detail__stats">
+            <span>&#128100; ${c.enrolled_count ?? 0} estudiantes inscritos</span>
+          </div>
+          <div class="course-card__actions" style="margin-top:20px">
+            ${isEnrolled
+              ? `<button class="btn btn--secondary" id="cd-resources">&#128196; Ver recursos</button>
+                 <button class="btn btn--danger" id="cd-cancel">Cancelar inscripción</button>`
+              : `<button class="btn btn--primary" id="cd-enroll">Inscribirse en este curso</button>`
+            }
+          </div>
+        </div>`;
+
+      document.getElementById('cd-enroll')?.addEventListener('click', async (e) => {
+        const btn = e.target; btn.disabled = true;
+        try {
+          await CourseService.enroll(courseId);
+          this._enrolledIds.add(courseId);
+          Toast.success('\u00a1Inscripci\u00f3n exitosa!');
+          document.getElementById('course-modal')?.remove();
+          await this.renderTab(false);
+        } catch (err) { Toast.error(err.message); btn.disabled = false; }
+      });
+
+      document.getElementById('cd-cancel')?.addEventListener('click', async (e) => {
+        const btn = e.target; btn.disabled = true;
+        try {
+          await CourseService.cancelEnrollment(courseId);
+          this._enrolledIds.delete(courseId);
+          Toast.success('Inscripci\u00f3n cancelada');
+          document.getElementById('course-modal')?.remove();
+          await this.renderTab(false);
+        } catch (err) { Toast.error(err.message); btn.disabled = false; }
+      });
+
+      document.getElementById('cd-resources')?.addEventListener('click', () => {
+        document.getElementById('course-modal')?.remove();
+        this.showResourcesModal(courseId, c.title, true);
+      });
+    } catch (err) {
+      document.getElementById('modal-body').innerHTML = `<p style="color:var(--danger)">${err.message}</p>`;
+    }
   },
 
   async toggleEnroll(courseId, btn) {
