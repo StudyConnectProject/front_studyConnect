@@ -28,6 +28,7 @@ export const Navbar = {
         <div class="nav__links">
           <a href="#/chat" class="nav__link">&#128172; Chat</a>
           <a href="#/courses" class="nav__link">&#127979; Cursos</a>
+          <a href="#/exams" class="nav__link">&#128221; Exámenes</a>
           <a href="#/matching" class="nav__link">&#129309; Tutorías</a>
           <a href="#/search" class="nav__link">&#128269; Buscar</a>
           ${adminLink}

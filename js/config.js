@@ -7,5 +7,6 @@ export const Config = {
     REPORTS: '/api/reports',
     COURSES: '/api/v1/courses',
     MATCHING: '/api/matching',
+    EXAMS: '/api/exams',
   },
 };

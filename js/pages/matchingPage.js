@@ -5,6 +5,8 @@ import { Auth } from '../utils/auth.js';
 import { Toast } from '../components/toast.js';
 
 const LEVELS = { beginner: 'Principiante', intermediate: 'Intermedio', advanced: 'Avanzado' };
+const SCHEDULES = { morning: '🌅 Mañana', afternoon: '☀️ Tarde', evening: '🌙 Noche', weekend: '📅 Fin de semana' };
+const MODALITIES = { virtual: '💻 Virtual', 'in-person': '🏫 Presencial', hybrid: '🔄 Híbrida' };
 const REQ_STATUS = {
   pending: { label: 'Pendiente', cls: 'badge--secondary' },
   processing: { label: 'En proceso', cls: 'badge--primary' },
@@ -247,6 +249,25 @@ export const MatchingPage = {
           </select>
           <label class="form__label">Descripción</label>
           <textarea id="ef-desc" class="form__input" rows="3" style="resize:vertical">${this.esc(req.description || '')}</textarea>
+          <label class="form__label">Horario preferido</label>
+          <select id="ef-schedule" class="form__input">
+            <option value="" ${!req.preferred_schedule ? 'selected' : ''}>Sin preferencia</option>
+            <option value="morning" ${req.preferred_schedule === 'morning' ? 'selected' : ''}>🌅 Mañana</option>
+            <option value="afternoon" ${req.preferred_schedule === 'afternoon' ? 'selected' : ''}>☀️ Tarde</option>
+            <option value="evening" ${req.preferred_schedule === 'evening' ? 'selected' : ''}>🌙 Noche</option>
+            <option value="weekend" ${req.preferred_schedule === 'weekend' ? 'selected' : ''}>📅 Fin de semana</option>
+          </select>
+          <label class="form__label">Idioma preferido</label>
+          <input type="text" id="ef-language" class="form__input" maxlength="100" placeholder="Ej. Español" value="${this.esc(req.preferred_language || '')}">
+          <label class="form__label">Modalidad</label>
+          <select id="ef-modality" class="form__input">
+            <option value="" ${!req.modality ? 'selected' : ''}>Sin preferencia</option>
+            <option value="virtual" ${req.modality === 'virtual' ? 'selected' : ''}>💻 Virtual</option>
+            <option value="in-person" ${req.modality === 'in-person' ? 'selected' : ''}>🏫 Presencial</option>
+            <option value="hybrid" ${req.modality === 'hybrid' ? 'selected' : ''}>🔄 Híbrida</option>
+          </select>
+          <label class="form__label">Precio máximo por hora</label>
+          <input type="number" id="ef-price" class="form__input" min="0" placeholder="0" value="${req.max_price || 0}">
           <div style="display:flex;gap:12px;margin-top:16px">
             <button type="submit" class="btn btn--primary">Guardar cambios</button>
             <button type="button" id="ef-cancel" class="btn btn--secondary">Cancelar</button>
@@ -263,9 +284,13 @@ export const MatchingPage = {
         btn.disabled = true;
         try {
           await MatchingService.update(requestId, {
-            subject: document.getElementById('ef-subject').value.trim(),
-            level: document.getElementById('ef-level').value,
-            description: document.getElementById('ef-desc').value.trim(),
+            subject:            document.getElementById('ef-subject').value.trim(),
+            level:              document.getElementById('ef-level').value,
+            description:        document.getElementById('ef-desc').value.trim(),
+            preferred_schedule: document.getElementById('ef-schedule').value,
+            preferred_language: document.getElementById('ef-language').value.trim(),
+            modality:           document.getElementById('ef-modality').value,
+            max_price:          parseInt(document.getElementById('ef-price').value, 10) || 0,
           });
           Toast.success('Solicitud actualizada');
           document.getElementById('matching-modal')?.remove();
@@ -455,30 +480,57 @@ export const MatchingPage = {
 
   /* ── Detalle de la tutoría (vista del tutor) ─────────────── */
   async showMatchDetail(requestId, studentId) {
-    this.openModal('Detalle de la tutoría', '<div class="loader" style="padding:20px;text-align:center">Cargando...</div>');
+    this.openModal('Detalle de la solicitud', '<div class="loader" style="padding:20px;text-align:center">Cargando...</div>');
     try {
       const req = await MatchingService.getById(requestId);
       const student = studentId
         ? await UserService.getById(studentId).catch(() => null)
         : null;
       const st = REQ_STATUS[req.status] || { label: req.status, cls: 'badge--secondary' };
-      const created = req.created_at ? new Date(req.created_at).toLocaleString('es') : '';
+      const created = req.created_at ? new Date(req.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+
+      // Preferences
+      const schedule = req.preferred_schedule ? (SCHEDULES[req.preferred_schedule] || req.preferred_schedule) : null;
+      const modality = req.modality ? (MODALITIES[req.modality] || req.modality) : null;
+      const language = req.preferred_language || null;
+      const maxPrice = req.max_price > 0 ? `$${req.max_price}/hora` : (req.max_price === 0 ? 'Sin límite' : null);
+
+      const hasPrefs = schedule || modality || language || maxPrice;
+
       document.getElementById('matching-modal-body').innerHTML = `
         <div class="course-detail">
-          <div class="course-detail__badges">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">
             <span class="tag tag--level">${LEVELS[req.level] || req.level}</span>
-            <span class="badge ${st.cls}" style="margin-left:auto">${st.label}</span>
+            <span class="badge ${st.cls}">${st.label}</span>
+            ${created ? `<span style="font-size:0.78rem;color:var(--text-secondary);margin-left:auto">Solicitada el ${created}</span>` : ''}
           </div>
           <h2 class="course-detail__title">${this.esc(req.subject)}</h2>
-          <p class="course-detail__desc">${this.esc(req.description || 'Sin descripción.')}</p>
-          ${created ? `<p style="font-size:0.8rem;color:var(--text-secondary)">Solicitada el ${created}</p>` : ''}
-          <div class="card" style="margin-top:16px">
-            <h3 class="card__title">Estudiante</h3>
+          ${req.description ? `<p class="course-detail__desc">${this.esc(req.description)}</p>` : '<p style="color:var(--text-secondary)">Sin descripción.</p>'}
+
+          ${hasPrefs ? `
+          <div class="card" style="margin-top:16px;padding:14px 16px">
+            <h3 style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:12px">Preferencias del estudiante</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+              ${schedule ? `<div><span style="font-size:0.75rem;color:var(--text-secondary)">Horario</span><p style="font-weight:600;margin-top:2px">${schedule}</p></div>` : ''}
+              ${modality ? `<div><span style="font-size:0.75rem;color:var(--text-secondary)">Modalidad</span><p style="font-weight:600;margin-top:2px">${modality}</p></div>` : ''}
+              ${language ? `<div><span style="font-size:0.75rem;color:var(--text-secondary)">Idioma</span><p style="font-weight:600;margin-top:2px">🌐 ${this.esc(language)}</p></div>` : ''}
+              ${maxPrice ? `<div><span style="font-size:0.75rem;color:var(--text-secondary)">Presupuesto máx.</span><p style="font-weight:600;margin-top:2px">💰 ${maxPrice}</p></div>` : ''}
+            </div>
+          </div>` : ''}
+
+          <div class="card" style="margin-top:16px;padding:14px 16px">
+            <h3 style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:12px">Estudiante</h3>
             ${student
-              ? `<p>${this.esc(student.name)}</p>
-                 <p class="card__email">${this.esc(student.email)}</p>
-                 ${(student.skills || []).length ? `<div class="tags" style="margin-top:8px">${student.skills.map(s => `<span class="tag">${this.esc(s)}</span>`).join('')}</div>` : ''}
-                 <button class="btn btn--small btn--primary" id="md-chat" style="margin-top:12px" data-uid="${student.id}">&#128172; Enviar mensaje</button>`
+              ? `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                   <div class="avatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0">${this.esc(student.name.charAt(0).toUpperCase())}</div>
+                   <div>
+                     <p style="font-weight:600">${this.esc(student.name)}</p>
+                     <p style="font-size:0.85rem;color:var(--text-secondary)">${this.esc(student.email)}</p>
+                   </div>
+                 </div>
+                 ${(student.skills || []).length ? `<div style="margin-bottom:8px"><span style="font-size:0.75rem;color:var(--text-secondary)">Habilidades</span><div class="tags" style="margin-top:4px">${student.skills.map(s => `<span class="tag">${this.esc(s)}</span>`).join('')}</div></div>` : ''}
+                 ${(student.interests || []).length ? `<div style="margin-bottom:12px"><span style="font-size:0.75rem;color:var(--text-secondary)">Intereses</span><div class="tags" style="margin-top:4px">${student.interests.map(i => `<span class="tag tag--outline">${this.esc(i)}</span>`).join('')}</div></div>` : ''}
+                 <button class="btn btn--small btn--primary" id="md-chat" data-uid="${student.id}">💬 Enviar mensaje</button>`
               : '<p style="color:var(--text-secondary)">Información del estudiante no disponible.</p>'}
           </div>
         </div>`;
@@ -498,11 +550,25 @@ export const MatchingPage = {
       const u = await UserService.getById(tutorId);
       document.getElementById('matching-modal-body').innerHTML = `
         <div class="course-detail">
-          <h2 class="course-detail__title">${this.esc(u.name)}</h2>
-          <p class="card__email">${this.esc(u.email)}</p>
-          ${(u.skills || []).length ? `<div class="tags" style="margin-top:10px">${u.skills.map(s => `<span class="tag">${this.esc(s)}</span>`).join('')}</div>` : ''}
-          ${(u.interests || []).length ? `<div class="tags" style="margin-top:8px">${u.interests.map(i => `<span class="tag tag--outline">${this.esc(i)}</span>`).join('')}</div>` : ''}
-          <button class="btn btn--primary" id="mt-chat" style="margin-top:16px">&#128172; Enviar mensaje</button>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+            <div style="width:56px;height:56px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.4rem;flex-shrink:0">${this.esc((u.name || '?').charAt(0).toUpperCase())}</div>
+            <div>
+              <h2 class="course-detail__title" style="margin:0">${this.esc(u.name)}</h2>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px">${this.esc(u.email)}</p>
+              ${u.role ? `<span class="badge badge--primary" style="margin-top:6px;display:inline-block">${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</span>` : ''}
+            </div>
+          </div>
+          ${(u.skills || []).length ? `
+            <div style="margin-bottom:14px">
+              <p style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:6px">Habilidades</p>
+              <div class="tags">${u.skills.map(s => `<span class="tag">${this.esc(s)}</span>`).join('')}</div>
+            </div>` : ''}
+          ${(u.interests || []).length ? `
+            <div style="margin-bottom:16px">
+              <p style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:6px">Intereses</p>
+              <div class="tags">${u.interests.map(i => `<span class="tag tag--outline">${this.esc(i)}</span>`).join('')}</div>
+            </div>` : ''}
+          <button class="btn btn--primary" id="mt-chat">💬 Enviar mensaje</button>
         </div>`;
       document.getElementById('mt-chat')?.addEventListener('click', () =>
         this.openChatWith(tutorId));

@@ -8,6 +8,7 @@ import { ChatPage } from './pages/chatPage.js';
 import { DashboardPage } from './pages/dashboardPage.js';
 import { CoursePage } from './pages/coursePage.js';
 import { MatchingPage } from './pages/matchingPage.js';
+import { ExamPage } from './pages/examPage.js';
 import { ChatService } from './services/chatService.js';
 
 const routes = {
@@ -18,6 +19,7 @@ const routes = {
   '/chat': () => ChatPage.render(),
   '/courses': () => CoursePage.render(),
   '/matching': () => MatchingPage.render(),
+  '/exams': () => ExamPage.render(),
   '/dashboard': () => DashboardPage.render(),
 };
 
