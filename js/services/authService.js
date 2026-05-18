@@ -4,33 +4,45 @@ import { ChatService } from './chatService.js';
 
 export const AuthService = {
   async login(email, password) {
-    const res = await fetch(`${Config.API.AUTH}/login`, {
+    const res = await fetch(`${Config.BASE_URL}${Config.API.AUTH}/login`, {
       method: 'POST',
+      credentials: 'include',  // necesario para que el browser almacene el Set-Cookie (refresh_token)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Error al iniciar sesión');
+      let err = {};
+      try { err = await res.json(); } catch (_) {}
+      throw new Error(err.message || `Error ${res.status} al iniciar sesión`);
     }
-    const data = await res.json();
-    Auth.setToken(data.access_token);
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+    const accessToken = data.accessToken || data.access_token;
+    const refreshToken = data.refreshToken || data.refresh_token;
+    Auth.setToken(accessToken);
+    if (refreshToken) Auth.setRefreshToken(refreshToken);
     Auth.setUser(data.user);
     return data;
   },
 
   async register(email, password, role) {
-    const res = await fetch(`${Config.API.AUTH}/register`, {
+    const res = await fetch(`${Config.BASE_URL}${Config.API.AUTH}/register`, {
       method: 'POST',
+      credentials: 'include',  // necesario para que el browser almacene el Set-Cookie (refresh_token)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, role }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Error al registrar');
+      let err = {};
+      try { err = await res.json(); } catch (_) {}
+      throw new Error(err.message || `Error ${res.status} al registrar`);
     }
-    const data = await res.json();
-    Auth.setToken(data.access_token);
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+    const accessToken = data.accessToken || data.access_token;
+    const refreshToken = data.refreshToken || data.refresh_token;
+    Auth.setToken(accessToken);
+    if (refreshToken) Auth.setRefreshToken(refreshToken);
     Auth.setUser(data.user);
     return data;
   },

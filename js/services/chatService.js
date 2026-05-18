@@ -8,7 +8,11 @@ export const ChatService = {
   connect() {
     if (this.socket?.connected) return;
     const token = Auth.getToken();
-    this.socket = io({ auth: { token } });
+    this.socket = io(Config.BASE_URL, {
+      path: '/socket.io',
+      auth: { token },
+      transports: ['websocket'],
+    });
     this.socket.on('connect_error', (err) => {
       console.error('[WS] Error:', err.message);
     });

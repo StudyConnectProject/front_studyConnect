@@ -2,7 +2,7 @@ import { Config } from '../config.js';
 
 const TOKEN_KEY = 'sc_access_token';
 const USER_KEY = 'sc_user';
-const LEGACY_REFRESH_KEY = 'sc_refresh_token';
+const REFRESH_KEY = 'sc_refresh_token';
 
 export const Auth = {
   getToken() {
@@ -10,6 +10,12 @@ export const Auth = {
   },
   setToken(token) {
     localStorage.setItem(TOKEN_KEY, token);
+  },
+  getRefreshToken() {
+    return localStorage.getItem(REFRESH_KEY);
+  },
+  setRefreshToken(token) {
+    localStorage.setItem(REFRESH_KEY, token);
   },
   getUser() {
     const data = localStorage.getItem(USER_KEY);
@@ -30,7 +36,7 @@ export const Auth = {
   clear() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(LEGACY_REFRESH_KEY);
+    localStorage.removeItem(REFRESH_KEY);
   },
 
   _refreshPromise: null,
@@ -41,11 +47,19 @@ export const Auth = {
     if (this._refreshPromise) return this._refreshPromise;
     this._refreshPromise = (async () => {
       try {
-        const res = await fetch(`${Config.API.AUTH}/refresh`, { method: 'POST' });
+        const res = await fetch(`${Config.BASE_URL}${Config.API.AUTH}/refresh`, {
+          method: 'POST',
+          credentials: 'include',  // envía la cookie HttpOnly refresh_token al servidor
+          headers: { 'Content-Type': 'application/json' },
+        });
         if (!res.ok) return false;
-        const data = await res.json();
-        if (!data.access_token) return false;
-        this.setToken(data.access_token);
+        let data = {};
+        try { data = await res.json(); } catch (_) { return false; }
+        const newAccess = data.accessToken || data.access_token;
+        const newRefresh = data.refreshToken || data.refresh_token;
+        if (!newAccess) return false;
+        this.setToken(newAccess);
+        if (newRefresh) this.setRefreshToken(newRefresh);
         if (data.user) this.setUser(data.user);
         return true;
       } catch (_) {
@@ -58,11 +72,13 @@ export const Auth = {
   },
 
   async fetchWithAuth(url, options = {}) {
+    // Prepend BASE_URL when the URL is a relative path (starts with /)
+    const fullUrl = url.startsWith('/') ? `${Config.BASE_URL}${url}` : url;
     const doFetch = () => {
       const headers = { 'Content-Type': 'application/json', ...options.headers };
       const token = this.getToken();
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      return fetch(url, { ...options, headers });
+      return fetch(fullUrl, { ...options, headers });
     };
 
     let response;
