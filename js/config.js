@@ -9,5 +9,6 @@ export const Config = {
     COURSES: '/api/courses',
     MATCHING: '/api/matching',
     EXAMS: '/api/exams',
+    AI_AGENT: '/api/agent',
   },
 };

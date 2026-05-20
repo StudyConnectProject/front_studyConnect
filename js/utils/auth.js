@@ -9,7 +9,9 @@ export const Auth = {
     return localStorage.getItem(TOKEN_KEY);
   },
   setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
+    if (token && token !== 'undefined' && token !== 'null') {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
   },
   getRefreshToken() {
     return localStorage.getItem(REFRESH_KEY);
@@ -22,7 +24,9 @@ export const Auth = {
     return data ? JSON.parse(data) : null;
   },
   setUser(user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    if (user != null) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
   },
   isAuthenticated() {
     return !!this.getToken();
@@ -42,15 +46,21 @@ export const Auth = {
   _refreshPromise: null,
 
   // Renueva el access token usando la cookie httpOnly refresh_token.
+  // Fallback: si no hay cookie disponible (entorno local HTTP), usa el refresh token de localStorage.
   // Single-flight: si varias peticiones fallan a la vez, comparten una sola renovación.
   refreshSession() {
     if (this._refreshPromise) return this._refreshPromise;
     this._refreshPromise = (async () => {
       try {
+        const storedRefreshToken = this.getRefreshToken();
+        const body = storedRefreshToken
+          ? JSON.stringify({ refresh_token: storedRefreshToken })
+          : null;
         const res = await fetch(`${Config.BASE_URL}${Config.API.AUTH}/refresh`, {
           method: 'POST',
           credentials: 'include',  // envía la cookie HttpOnly refresh_token al servidor
           headers: { 'Content-Type': 'application/json' },
+          body,
         });
         if (!res.ok) return false;
         let data = {};

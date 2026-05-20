@@ -470,13 +470,23 @@ export const ChatPage = {
   },
 
   async loadUserList() {
+    const resultsEl = document.getElementById('new-conv-results');
+    if (resultsEl) resultsEl.innerHTML = '<div class="loader" style="padding:10px;text-align:center">Cargando...</div>';
     try {
       const users = await UserService.search({});
       const me = Auth.getUser();
       this._allUsers = users.filter(u => u.id !== me?.id);
       this.renderUserList(this._allUsers);
     } catch (err) {
-      if (err.message !== 'SESSION_EXPIRED') Toast.error('Error al cargar usuarios');
+      if (err.message === 'SESSION_EXPIRED') return;
+      if (resultsEl) {
+        resultsEl.innerHTML = `
+          <div class="new-conv-error" style="padding:12px;text-align:center">
+            <p style="margin:0 0 8px;font-size:0.875rem;color:var(--color-danger,#dc2626)">No se pudieron cargar los usuarios</p>
+            <button id="retry-load-users" class="btn btn--small btn--secondary">Reintentar</button>
+          </div>`;
+        resultsEl.querySelector('#retry-load-users')?.addEventListener('click', () => this.loadUserList());
+      }
     }
   },
 
