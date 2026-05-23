@@ -29,8 +29,13 @@ export const MatchingPage = {
 
   async render() {
     const user = Auth.getUser();
-    const role = user?.role?.toLowerCase() || (user?.roles?.[0] || '').toLowerCase();
-    this._isTutor = role === 'tutor' || role === 'admin';
+    // Normalise roles from both auth-service format (roles: ["TUTOR"]) and
+    // user-service format (role: "tutor") so detection is always reliable.
+    const allRoles = [
+      String(user?.role || '').toLowerCase(),
+      ...((Array.isArray(user?.roles) ? user.roles : []).map(r => String(r).toLowerCase()))
+    ].filter(Boolean);
+    this._isTutor = allRoles.some(r => r === 'tutor' || r === 'admin');
 
     const main = document.getElementById('main-content');
     const tabs = this._isTutor
