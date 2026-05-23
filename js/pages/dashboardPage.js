@@ -10,11 +10,18 @@ export const DashboardPage = {
     main.innerHTML = '<div class="page"><div class="loader">Cargando dashboard...</div></div>';
 
     try {
-      const [metrics, peakHours, topTutors] = await Promise.all([
+      const [metricsResult, peakHoursResult, topTutorsResult] = await Promise.allSettled([
         AnalyticsService.getSystemMetrics(),
         AnalyticsService.getPeakHours(),
         AnalyticsService.getTopTutors(),
       ]);
+
+      const analyticsDown = [metricsResult, peakHoursResult, topTutorsResult].every(r => r.status === 'rejected');
+      if (analyticsDown) Toast.show('Servicio de analíticas no disponible', 'warning');
+
+      const metrics   = metricsResult.status   === 'fulfilled' ? metricsResult.value   : { totalEvents: 0, last24h: 0, last7d: 0, last30d: 0, byType: [], bySource: [] };
+      const peakHours = peakHoursResult.status === 'fulfilled' ? peakHoursResult.value : { peakHours: [] };
+      const topTutors = topTutorsResult.status === 'fulfilled' ? topTutorsResult.value : { tutors: [] };
 
       const total = metrics.totalEvents || 1;
 
